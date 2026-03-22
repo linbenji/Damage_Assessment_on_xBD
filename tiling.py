@@ -1,0 +1,94 @@
+import os
+import json
+import numpy as np
+import rasterio
+from rasterio.features import rasterize
+
+def tile_image(image_path, label_path, skip_empty=False):
+    """
+    Tile a satellite image and its corresponding label mask into smaller patches.
+
+    :param image_path: Path to input GeoTIFF image
+    :param label_path: Path to corresponding GeoJSON label file
+    :param skip_empty: If True, skip empty tiles. Defaults to False.
+    :return: None
+    """
+
+    # Configuration
+    tile_size = 512
+    tile_img_dir = "tiles/images/"
+    tile_mask_dir = "tiles/masks/"
+    os.makedirs(tile_img_dir, exist_ok=True)
+    os.makedirs(tile_mask_dir, exist_ok=True)
+    damage_map = { # map damage types to integers
+        "no-damage": 1,
+        "minor-damage": 2,
+        "major-damage": 3,
+        "destroyed": 4
+    }
+
+    # Load image
+    with rasterio.open(image_path) as src:
+        image = src.read()  # shape: (channels, H, W)
+        transform = src.transform
+        height = src.height
+        width = src.width
+
+    # Load polygons
+    with open(label_path) as f:
+        geojson = json.load(f)
+    shapes = []
+    for feature in geojson["features"]:
+        geom = feature["geometry"]
+        damage = feature["properties"]["subtype"]  # damage class
+        value = damage_map.get(damage, 0)
+        shapes.append((geom, value))
+
+    # Create rasterized mask of polygons
+    mask = rasterize(
+        shapes=shapes,
+        out_shape=(height, width),
+        transform=transform,
+        fill=0,  # background
+        dtype=np.uint8
+    )
+
+    # Tile both the image and the mask
+    for i in range(0, width, tile_size):
+        for j in range(0, height, tile_size):
+
+            w = min(tile_size, width - i)
+            h = min(tile_size, height - j)
+            img_tile = image[:, j:j+h, i:i+w]
+            mask_tile = mask[j:j+h, i:i+w]
+
+            # Skip empty tiles (optional optimization)
+            if skip_empty and np.sum(mask_tile) == 0:
+                continue
+
+            # Filenames
+            tile_name = f"{os.path.basename(image_path)[:-4]}_{i}_{j}.tif"
+
+            # Save image tile
+            with rasterio.open(
+                os.path.join(tile_img_dir, tile_name),
+                "w",
+                driver="GTiff",
+                height=h,
+                width=w,
+                count=image.shape[0],
+                dtype=image.dtype
+            ) as dst:
+                dst.write(img_tile)
+
+            # Save mask tile
+            with rasterio.open(
+                os.path.join(tile_mask_dir, tile_name),
+                "w",
+                driver="GTiff",
+                height=h,
+                width=w,
+                count=1,
+                dtype=mask_tile.dtype
+            ) as dst:
+                dst.write(mask_tile, 1)
