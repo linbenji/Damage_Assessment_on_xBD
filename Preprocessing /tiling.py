@@ -4,6 +4,7 @@ import numpy as np
 import rasterio
 from rasterio.features import rasterize
 
+# Code Line x - y provided by GPT  (Ex. citation)
 def tile_image(image_path, label_path, skip_empty=False):
     """
     Tile a satellite image and its corresponding label mask into smaller patches.
