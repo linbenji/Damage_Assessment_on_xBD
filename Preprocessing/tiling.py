@@ -8,7 +8,7 @@ import shapely.geometry
 import warnings
 from rasterio.errors import NotGeoreferencedWarning
 
-# TODO: Code Line x - y provided by GPT  (Ex. citation)
+
 def tile_image(image_path, label_path, skip_empty=True):
     """
     Tile a satellite image and its corresponding label mask into smaller patches.
@@ -25,7 +25,7 @@ def tile_image(image_path, label_path, skip_empty=True):
     tile_mask_dir = "tiles/masks/"
     os.makedirs(tile_img_dir, exist_ok=True)
     os.makedirs(tile_mask_dir, exist_ok=True)
-    damage_map = { # map damage types to integers
+    damage_map = { # TODO: confirm labels
         "no-damage": 1,
         "minor-damage": 2,
         "major-damage": 3,
@@ -54,12 +54,13 @@ def tile_image(image_path, label_path, skip_empty=True):
         value = damage_map.get(damage, 0)
         shapes.append((geom, value))
 
+    # Lines 58 - 105 were created with the assistance of ChatGPT
     # Create rasterized mask of polygons
     mask = rasterize(
         shapes=shapes,
         out_shape=(height, width),
         transform=transform,
-        fill=0,  # background
+        fill=0,  # background label
         dtype=np.uint8
     )
 
