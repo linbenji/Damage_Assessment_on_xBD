@@ -168,7 +168,7 @@ def run_training(model, train_loader, val_loader,
     return history
 
 
-def plot_training_history(history):
+def plot_train_history(history):
     epochs = range(1, len(history["train_loss"]) + 1)
     fig, axes = plt.subplots(1, 3, figsize=(16, 4))
 
