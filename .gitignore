@@ -1,0 +1,14 @@
+# Tile data
+Preprocessing/tiles/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Model weights (large binaries - optional, remove if you want to track these)
+*.pth
+*.pt
