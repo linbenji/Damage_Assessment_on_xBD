@@ -15,11 +15,12 @@ from PIL import Image
 
 # class XBDDatasetAugmented created w/ Assistance from LLM
 class XBDDatasetAugmented(Dataset):
-    def __init__(self, file_list, img_dir, mask_dir, augment=False):
+    def __init__(self, file_list, img_dir, mask_dir, augment=False, siamese=False):
         self.file_list = file_list
         self.img_dir = img_dir
         self.mask_dir = mask_dir
         self.augment = augment
+        self.siamese = siamese
 
     def __len__(self):
         return len(self.file_list)
@@ -47,6 +48,7 @@ class XBDDatasetAugmented(Dataset):
 
         return pre, post, mask
 
+
     def __getitem__(self, idx):
         post_name = self.file_list[idx]
         pre_name = post_name.replace("post_disaster", "pre_disaster")
@@ -55,12 +57,25 @@ class XBDDatasetAugmented(Dataset):
         post = np.array(Image.open(os.path.join(self.img_dir, post_name))).astype(np.float32) / 255.0
         mask = np.array(Image.open(os.path.join(self.mask_dir, post_name))).astype(np.int64)
 
-        # HWC -> CHW
         pre = np.transpose(pre, (2, 0, 1))
         post = np.transpose(post, (2, 0, 1))
 
         if self.augment:
             pre, post, mask = self._apply_augmentations(pre, post, mask)
 
-        image = np.concatenate([pre, post], axis=0)
-        return torch.tensor(image, dtype=torch.float32), torch.tensor(mask, dtype=torch.long)
+        # Normalize augmented pre and post datasets to [-1, 1]
+        pre = (pre - 0.5) / 0.5
+        post = (post - 0.5) / 0.5
+
+
+        if self.siamese: # do not concatenate pre post and mask if siamese
+            return (
+                torch.tensor(pre, dtype=torch.float32),
+                torch.tensor(post, dtype=torch.float32),
+                torch.tensor(mask, dtype=torch.long),
+            )
+        else: # Add normalized difference if not Siamese (used for change detection, in range [-1,1])
+            diff = (post - pre) / 2.0
+            image = np.concatenate([pre, post, diff], axis=0)
+
+            return torch.tensor(image, dtype=torch.float32), torch.tensor(mask, dtype=torch.long)

@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import matplotlib.pyplot as plt
 
-from src.eval import ConfusionMatrixTracker, validate, CLASS_NAMES
+from eval import ConfusionMatrixTracker, validate, CLASS_NAMES
 
 # Class TverskyLoss provided by LLM
 class TverskyLoss(nn.Module):
@@ -90,22 +90,35 @@ class EarlyStopping:
 
         return improved
 
-def train_one_epoch(model, loader, criterion, optimizer, device, num_classes = 5):
+def train_one_epoch(model, loader, criterion, optimizer, device, num_classes=5, siamese=False):
     model.train()
     running_loss = 0.0
     tracker = ConfusionMatrixTracker(num_classes)
 
-    for images, masks in tqdm(loader, desc="Train", leave=False):
-        images = images.to(device)
-        masks = masks.to(device)
+    for batch in tqdm(loader, desc="Train", leave=False):
 
         optimizer.zero_grad()
-        outputs = model(images)  # [B, 5, H, W]
+
+        if siamese:
+            pre, post, masks = batch
+            pre = pre.to(device)
+            post = post.to(device)
+            masks = masks.to(device)
+
+            outputs = model(pre, post)
+
+        else:
+            images, masks = batch
+            images = images.to(device)
+            masks = masks.to(device)
+
+            outputs = model(images)
+
         loss = criterion(outputs, masks)
         loss.backward()
         optimizer.step()
 
-        running_loss += loss.item() * images.size(0)
+        running_loss += loss.item() * masks.size(0)
         tracker.update(outputs.argmax(dim=1), masks)
 
     return running_loss / len(loader.dataset), tracker.compute()
@@ -116,7 +129,8 @@ def train_one_epoch(model, loader, criterion, optimizer, device, num_classes = 5
 def run_training(model, train_loader, val_loader,
         criterion, optimizer, scheduler, device,
         num_epochs=25, patience=5, num_classes=5,
-        save_path="best_model.pth", verbose=True):
+        save_path="best_model.pth", verbose=True,
+        siamese=False):
 
     early_stop = EarlyStopping(patience=patience, mode='max')
     history = {"train_loss": [], "val_loss": [], "train_miou": [], "val_miou": [], "lr": []}
@@ -126,10 +140,10 @@ def run_training(model, train_loader, val_loader,
         history["lr"].append(current_lr)
 
         train_loss, train_metrics = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, num_classes
+            model, train_loader, criterion, optimizer, device, num_classes, siamese=siamese
         )
         val_loss, val_metrics = validate(
-            model, val_loader, criterion, device, num_classes
+            model, val_loader, criterion, device, num_classes, siamese=siamese
         )
         scheduler.step()
 
