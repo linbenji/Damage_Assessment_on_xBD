@@ -30,7 +30,7 @@ class ConvBlock(nn.Module):
         return self.block(x)
 
 class UNet(nn.Module):
-    def __init__(self, in_channels=6, num_classes=5, base_features=32):
+    def __init__(self, in_channels=9, num_classes=5, base_features=32):
         super().__init__()
         f = base_features  # 32
 

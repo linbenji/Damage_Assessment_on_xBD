@@ -78,28 +78,35 @@ class ConfusionMatrixTracker:
         }
 
 @torch.no_grad()
-def validate(model, loader, criterion, device, num_classes = 5):
+def validate(model, loader, criterion, device, num_classes = 5, siamese=False):
     model.eval()
     running_loss = 0.0
     tracker = ConfusionMatrixTracker(num_classes)
 
-    for images, masks in tqdm(loader, desc="Val", leave=False):
-        images = images.to(device)
+    for batch in loader:
+        if siamese:
+            pre, post, masks = batch
+            pre, post = pre.to(device), post.to(device)
+            outputs = model(pre, post)
+        else:
+            images, masks = batch
+            images = images.to(device)
+            outputs = model(images)
+
         masks = masks.to(device)
 
-        outputs = model(images)
         loss = criterion(outputs, masks)
 
-        running_loss += loss.item() * images.size(0)
+        running_loss += loss.item() * masks.size(0)
         tracker.update(outputs.argmax(dim=1), masks)
 
 
     return running_loss / len(loader.dataset), tracker.compute()
 
 
-def test_evaluation(model, test_loader, criterion, device, save_path, num_classes=5):
+def test_evaluation(model, test_loader, criterion, device, save_path, num_classes=5, siamese=False):
     model.load_state_dict(torch.load(save_path, weights_only=True))
-    test_loss, test_metrics = validate(model, test_loader, criterion, device, num_classes)
+    test_loss, test_metrics = validate(model, test_loader, criterion, device, num_classes, siamese=siamese)
 
     print(f"Test Loss: {test_loss:.4f}")
     print(f"Test mIoU: {test_metrics['miou']:.4f}")
