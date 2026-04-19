@@ -48,7 +48,9 @@ class ConfusionMatrixTracker:
             - per_class_precision:  [C] array
             - per_class_recall:     [C] array
             - miou:                 scalar
+            - damage_miou:         scalar
             - accuracy:             scalar
+            - macro_f1:             scalar
             - confusion_matrix:     [C, C] array
         """
         cm = self.matrix
@@ -68,12 +70,24 @@ class ConfusionMatrixTracker:
         accuracy = TP.sum() / cm.sum() if cm.sum() > 0 else 0.0
         miou = np.nanmean(iou)
 
+        # Damage only miou (Minor, Major, Destroyed classes)
+        damage_miou = np.nanmean(iou[[1, 2, 3]])
+
+        f1 = np.where(
+            (precision + recall) > 0,
+            2 * precision * recall / (precision + recall),
+            np.nan
+        )
+        macro_f1 = np.nanmean(f1)
+
         return {
             "per_class_iou": iou,
             "per_class_precision": precision,
             "per_class_recall": recall,
             "miou": miou,
+            "damage_miou": damage_miou,
             "accuracy": accuracy,
+            "macro_f1": macro_f1,
             "confusion_matrix": cm,
         }
 
