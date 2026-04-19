@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 import matplotlib.pyplot as plt
 
-from eval import ConfusionMatrixTracker, validate, CLASS_NAMES
+from src.eval import ConfusionMatrixTracker, validate, CLASS_NAMES
 
 # Class TverskyLoss provided by LLM
 class TverskyLoss(nn.Module):

@@ -8,7 +8,7 @@ then be used as input to the UNet for segmentation.
 
 import torch
 import torch.nn as nn
-from model_unet import ConvBlock
+from src.model_unet import ConvBlock
 
 # Encoder and Decoder design from model_unet.py
 # TODO: Siamese design requires separate encoder/decoder. We Can
@@ -66,7 +66,7 @@ class SiameseUNetDecoder(nn.Module):
 
 # Class created with the assistance of LLMs
 class SiameseUNet(nn.Module):
-    def __init__(self, num_classes, base_features, in_channels=9):
+    def __init__(self, num_classes, base_features, in_channels=3):
         super().__init__()
         self.encoder = SiameseUnetEncoder(in_channels=in_channels, base_features=base_features)
         self.decoder = SiameseUNetDecoder(num_classes=num_classes, base_features=base_features)

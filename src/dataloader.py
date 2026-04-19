@@ -5,7 +5,7 @@ XBD Dataset Dataloader
 """
 
 from torch.utils.data import DataLoader
-from augment import XBDDatasetAugmented
+from src.augment import XBDDatasetAugmented
 
 
 def get_loaders(train_files, val_files, test_files,
