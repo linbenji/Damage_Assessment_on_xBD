@@ -16,6 +16,26 @@ import matplotlib.pyplot as plt
 from src.eval import ConfusionMatrixTracker, validate, CLASS_NAMES
 from torch.amp import autocast, GradScaler
 
+# OHEMCrossEntropy done w/ assistance from LLM 
+class OHEMCrossEntropy(nn.Module):
+
+    def __init__(self, keep_ratio=0.7, class_weights=None):
+        super().__init__()
+        self.keep_ratio = keep_ratio
+        self.class_weights = class_weights
+
+    def forward(self, logits, targets):
+        loss_per_pixel = F.cross_entropy(
+            logits, targets,
+            weight=self.class_weights,
+            reduction='none'
+        ).view(-1)  
+
+        # Keep only the top-k hardest pixels
+        k = max(1, int(self.keep_ratio * loss_per_pixel.numel()))
+        topk_loss, _ = loss_per_pixel.topk(k)
+
+        return topk_loss.mean()
 
 # Class TverskyLoss provided by LLM
 class TverskyLoss(nn.Module):
@@ -46,25 +66,30 @@ class TverskyLoss(nn.Module):
         FN = ((1 - probs) * one_hot).sum(dim=dims)
 
         tversky = (TP + self.smooth) / (TP + self.alpha * FN + self.beta * FP + self.smooth)
-        focal_tversky = (1.0 - tversky) ** self.gamma  # shape: [num_classes]
+        focal_tversky = (1.0 - tversky) ** self.gamma
 
         if class_weights is not None:
-            w = class_weights / class_weights.sum()  # normalise so scale stays stable
+            w = class_weights / class_weights.sum()
             return (w * focal_tversky).sum()
-        
+
         return focal_tversky.mean()
+
 
 # Class ComboLoss created w/ assistance by LLM
 class ComboLoss(nn.Module):
     """
-    Weighted combination: ce_weight * CrossEntropy + tversky_weight * FocalTverskyLoss
-    Class weights are now applied to BOTH terms.
+    OHEM Cross Entropy + Focal Tversky Loss.
+    OHEM handles hard pixel mining, Tversky handles class imbalance.
     """
 
     def __init__(self, class_weights, ce_weight=0.3, tversky_weight=0.7,
-                 tversky_alpha=0.8, tversky_beta=0.2, tversky_gamma=0.75, num_classes=5):
+                 tversky_alpha=0.8, tversky_beta=0.2, tversky_gamma=0.75,
+                 ohem_keep_ratio=0.7, num_classes=5):
         super().__init__()
-        self.ce = nn.CrossEntropyLoss(weight=class_weights)
+        self.ce = OHEMCrossEntropy(
+            keep_ratio=ohem_keep_ratio,
+            class_weights=class_weights
+        )
         self.tversky = TverskyLoss(
             alpha=tversky_alpha,
             beta=tversky_beta,
@@ -180,7 +205,7 @@ def run_training(model, train_loader, val_loader,
         history["train_miou"].append(train_metrics["miou"])
         history["val_miou"].append(val_metrics["miou"])
 
-        if verbose:
+        if verbose and (epoch % 5 == 0 or epoch == 1 or epoch == num_epochs):
             print(f"\nEpoch {epoch}/{num_epochs}  (lr={current_lr:.2e})")
             print(f"  Train Loss: {train_loss:.4f}  |  Val Loss: {val_loss:.4f}")
             print(f"  Train mIoU: {train_metrics['miou']:.4f}  |  Val mIoU: {val_metrics['miou']:.4f}")
