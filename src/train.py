@@ -23,45 +23,60 @@ class TverskyLoss(nn.Module):
     alpha > beta  →  penalizes false negatives more (boosts recall)
     alpha < beta  →  penalizes false positives more (boosts precision)
     alpha = beta = 0.5  →  equivalent to Dice loss
+    gamma < 1.0   →  focal effect, focuses loss on hard/rare classes
     """
 
-    def __init__(self, alpha=0.7, beta=0.3, smooth=1e-6, num_classes=5):
+    def __init__(self, alpha=0.7, beta=0.3, gamma=0.75, smooth=1e-6, num_classes=5):
         super().__init__()
         self.alpha = alpha
         self.beta = beta
+        self.gamma = gamma
         self.smooth = smooth
         self.num_classes = num_classes
 
-    def forward(self, logits, targets):
+    def forward(self, logits, targets, class_weights=None):
         probs = F.softmax(logits, dim=1)
         one_hot = F.one_hot(targets, self.num_classes).permute(0, 3, 1, 2).float()
 
-        dims = (0, 2, 3)  # sum over batch, H, W
+        dims = (0, 2, 3)
         TP = (probs * one_hot).sum(dim=dims)
         FP = (probs * (1 - one_hot)).sum(dim=dims)
         FN = ((1 - probs) * one_hot).sum(dim=dims)
 
         tversky = (TP + self.smooth) / (TP + self.alpha * FN + self.beta * FP + self.smooth)
-        return 1.0 - tversky.mean()
+        focal_tversky = (1.0 - tversky) ** self.gamma  # shape: [num_classes]
+
+        if class_weights is not None:
+            w = class_weights / class_weights.sum()  # normalise so scale stays stable
+            return (w * focal_tversky).sum()
+        
+        return focal_tversky.mean()
 
 # Class ComboLoss created w/ assistance by LLM
 class ComboLoss(nn.Module):
     """
-    Weighted combination: ce_weight * CrossEntropy + tversky_weight * TverskyLoss
+    Weighted combination: ce_weight * CrossEntropy + tversky_weight * FocalTverskyLoss
+    Class weights are now applied to BOTH terms.
     """
 
-    def __init__(self, class_weights, ce_weight=0.5, tversky_weight=0.5,
-                 tversky_alpha=0.7, tversky_beta=0.3, num_classes=5):
+    def __init__(self, class_weights, ce_weight=0.3, tversky_weight=0.7,
+                 tversky_alpha=0.8, tversky_beta=0.2, tversky_gamma=0.75, num_classes=5):
         super().__init__()
         self.ce = nn.CrossEntropyLoss(weight=class_weights)
-        self.tversky = TverskyLoss(alpha=tversky_alpha, beta=tversky_beta,
-                                   num_classes=num_classes)
+        self.tversky = TverskyLoss(
+            alpha=tversky_alpha,
+            beta=tversky_beta,
+            gamma=tversky_gamma,
+            num_classes=num_classes
+        )
         self.ce_weight = ce_weight
         self.tversky_weight = tversky_weight
+        self.register_buffer("class_weights", class_weights)
 
     def forward(self, logits, targets):
-        return (self.ce_weight * self.ce(logits, targets) +
-                self.tversky_weight * self.tversky(logits, targets))
+        ce_loss = self.ce(logits, targets)
+        tversky_loss = self.tversky(logits, targets, class_weights=self.class_weights)
+        return self.ce_weight * ce_loss + self.tversky_weight * tversky_loss
 
 # Modified Version From :medium.com/biased-algorithms/a-practical-guide-to-implementing-early-stopping-in-pytorch-for-model-training-99a7cbd46e9d
 class EarlyStopping:
