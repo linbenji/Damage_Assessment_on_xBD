@@ -4,8 +4,9 @@ dataloader.py
 XBD Dataset Dataloader
 """
 
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 from src.augment import XBDDatasetAugmented
+import numpy as np
 
 
 def get_loaders(train_files, val_files, test_files,
@@ -20,8 +21,18 @@ def get_loaders(train_files, val_files, test_files,
     val_dataset = XBDDatasetAugmented(val_files, img_dir, mask_dir, siamese=siamese, augment=False)
     test_dataset = XBDDatasetAugmented(test_files, img_dir, mask_dir, siamese=siamese, augment=False)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size,
-                              shuffle=True, num_workers = num_workers, pin_memory = pin_memory)
+    # Oversampling
+    weights = np.array(train_dataset.sample_weights)
+    weights = weights / (weights.mean() + 1e-8)
+    weights = np.sqrt(weights + 1e-6) # normalize
+    sampler = WeightedRandomSampler(
+        weights=weights,
+        num_samples=len(weights),
+        replacement=True
+    )
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=sampler,
+                              shuffle=False, num_workers = num_workers, pin_memory = pin_memory)
     val_loader = DataLoader(val_dataset, batch_size=batch_size,
                             shuffle=False, num_workers = num_workers, pin_memory = pin_memory)
     test_loader = DataLoader(test_dataset, batch_size=batch_size,

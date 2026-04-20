@@ -22,6 +22,14 @@ class XBDDatasetAugmented(Dataset):
         self.augment = augment
         self.siamese = siamese
 
+        # Define sample weights for oversampling
+        self.sample_weights = []
+        for fname in self.file_list:
+            mask_path = os.path.join(self.mask_dir, fname)
+            mask = np.array(Image.open(mask_path)).astype(np.int64)
+            w = self.get_sample_weight(mask)
+            self.sample_weights.append(w)
+
     def __len__(self):
         return len(self.file_list)
 
@@ -79,3 +87,15 @@ class XBDDatasetAugmented(Dataset):
             image = np.concatenate([pre, post, diff], axis=0)
 
             return torch.tensor(image, dtype=torch.float32), torch.tensor(mask, dtype=torch.long)
+
+    def get_sample_weight(self, mask):
+        """
+        Gets weights for major/destroyed classes for oversampling.
+        Uses tile-level weights (ie, not pixel density) to focus
+        on presence of major and destroyed classes.
+        """
+        has_damage = np.any((mask == 2) | (mask == 3))
+        if has_damage:
+            return 3.0
+        else:
+            return 1.0

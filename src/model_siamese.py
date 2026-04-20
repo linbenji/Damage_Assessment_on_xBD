@@ -11,9 +11,6 @@ import torch.nn as nn
 from src.model_unet import ConvBlock
 
 # Encoder and Decoder design from model_unet.py
-# TODO: Siamese design requires separate encoder/decoder. We Can
-# TODO: use these classes for all other UNets for consistency,
-# TODO: but would of course require refactoring.
 
 class SiameseUnetEncoder(nn.Module):
     def __init__(self, in_channels=3, base_features=32):
