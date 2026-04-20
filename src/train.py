@@ -14,6 +14,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 from src.eval import ConfusionMatrixTracker, validate, CLASS_NAMES
+from torch.amp import autocast, GradScaler
+
 
 # Class TverskyLoss provided by LLM
 class TverskyLoss(nn.Module):
@@ -105,7 +107,7 @@ class EarlyStopping:
 
         return improved
 
-def train_one_epoch(model, loader, criterion, optimizer, device, num_classes=5, siamese=False):
+def train_one_epoch(model, loader, criterion, optimizer, device, num_classes=5, siamese=False, scheduler = None, scaler = None):
     model.train()
     running_loss = 0.0
     tracker = ConfusionMatrixTracker(num_classes)
@@ -120,21 +122,33 @@ def train_one_epoch(model, loader, criterion, optimizer, device, num_classes=5, 
             post = post.to(device)
             masks = masks.to(device)
 
-            outputs = model(pre, post)
+            with autocast(device_type='cuda'):
+                outputs = model(pre, post)
+                loss = criterion(outputs, masks)
 
         else:
             images, masks = batch
             images = images.to(device)
             masks = masks.to(device)
 
-            outputs = model(images)
+            with autocast(device_type='cuda'):
+                outputs = model(images)
+                loss = criterion(outputs, masks)
 
-        loss = criterion(outputs, masks)
-        loss.backward()
-        optimizer.step()
+        if scaler is not None:
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        
+        else:
+            loss.backward()
+            optimizer.step()
+        
+        if scheduler is not None: 
+            scheduler.step()
 
         running_loss += loss.item() * masks.size(0)
-        tracker.update(outputs.argmax(dim=1), masks)
+        tracker.update(outputs.argmax(dim=1).detach(), masks)
 
     return running_loss / len(loader.dataset), tracker.compute()
 
@@ -145,7 +159,7 @@ def run_training(model, train_loader, val_loader,
         criterion, optimizer, scheduler, device,
         num_epochs=25, patience=5, num_classes=5,
         save_path="best_model.pth", verbose=True,
-        siamese=False):
+        siamese=False, scaler = None):
 
     early_stop = EarlyStopping(patience=patience, mode='max')
     history = {"train_loss": [], "val_loss": [], "train_miou": [], "val_miou": [], "lr": []}
@@ -155,12 +169,11 @@ def run_training(model, train_loader, val_loader,
         history["lr"].append(current_lr)
 
         train_loss, train_metrics = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, num_classes, siamese=siamese
+            model, train_loader, criterion, optimizer, device, num_classes, siamese=siamese, scheduler = scheduler, scaler = scaler
         )
         val_loss, val_metrics = validate(
             model, val_loader, criterion, device, num_classes, siamese=siamese
         )
-        scheduler.step()
 
         history["train_loss"].append(train_loss)
         history["val_loss"].append(val_loss)

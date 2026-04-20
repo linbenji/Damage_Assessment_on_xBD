@@ -42,17 +42,17 @@ class SiameseUNetDecoder(nn.Module):
         super().__init__()
         f = base_features
 
-        self.up4 = nn.ConvTranspose2d(f * 32, f * 8, 2, stride=2)
-        self.dec4 = ConvBlock(f * 24, f * 8)
+        self.up4 = nn.ConvTranspose2d(f * 48, f * 8, 2, stride=2)
+        self.dec4 = ConvBlock(f * 32, f * 8)
 
         self.up3 = nn.ConvTranspose2d(f * 8, f * 4, 2, stride=2)
-        self.dec3 = ConvBlock(f * 12, f * 4)
+        self.dec3 = ConvBlock(f * 16, f * 4)
 
         self.up2 = nn.ConvTranspose2d(f * 4, f * 2, 2, stride=2)
-        self.dec2 = ConvBlock(f * 6, f * 2)
+        self.dec2 = ConvBlock(f * 8, f * 2)
 
         self.up1 = nn.ConvTranspose2d(f * 2, f, 2, stride=2)
-        self.dec1 = ConvBlock(f * 3, f)
+        self.dec1 = ConvBlock(f * 4, f)
 
         self.out_conv = nn.Conv2d(f, num_classes, 1)
 
@@ -78,11 +78,11 @@ class SiameseUNet(nn.Module):
 
         # Fuse pre- and post- encodings at each scale (Siamese change detection)
         # Use torch.cat to preserve pre-/post- directionality
-        e1 = torch.cat([e1p, e1q], dim=1)
-        e2 = torch.cat([e2p, e2q], dim=1)
-        e3 = torch.cat([e3p, e3q], dim=1)
-        e4 = torch.cat([e4p, e4q], dim=1)
-        b = torch.cat([bp, bq], dim=1)
+        e1 = torch.cat([e1p, e1q, torch.abs(e1p - e1q)], dim=1)
+        e2 = torch.cat([e2p, e2q, torch.abs(e2p - e2q)], dim=1)
+        e3 = torch.cat([e3p, e3q, torch.abs(e3p - e3q)], dim=1)
+        e4 = torch.cat([e4p, e4q, torch.abs(e4p - e4q)], dim=1)
+        b  = torch.cat([bp, bq,  torch.abs(bp - bq)],   dim=1)
 
         # Decode fused encoding (segmentation step)
         return self.decoder(e1, e2, e3, e4, b)
