@@ -25,7 +25,7 @@ def tile_image(image_path, label_path, skip_empty=True):
     tile_mask_dir = "tiles/masks/"
     os.makedirs(tile_img_dir, exist_ok=True)
     os.makedirs(tile_mask_dir, exist_ok=True)
-    damage_map = { # TODO: confirm labels
+    damage_map = {
         "no-damage": 1,
         "minor-damage": 2,
         "major-damage": 3,

@@ -1,8 +1,8 @@
 """
 eval.py
 
-Evaluation Utilities for XBD Dataset
-
+Contains evaluation utilities for models trained
+on the xBD Dataset
 """
 
 import numpy as np
@@ -43,7 +43,7 @@ class ConfusionMatrixTracker:
 
     def compute(self):
         """
-        Returns dict with:
+        Returns dict containing the following eval metrics:
             - per_class_iou:       [C] array
             - per_class_precision:  [C] array
             - per_class_recall:     [C] array
@@ -58,21 +58,22 @@ class ConfusionMatrixTracker:
         FP = cm.sum(axis=0) - TP
         FN = cm.sum(axis=1) - TP
 
+        # Per-class metrics
         denom_iou = TP + FP + FN
         iou = np.where(denom_iou > 0, TP / denom_iou, np.nan)
-
         denom_prec = TP + FP
         precision = np.where(denom_prec > 0, TP / denom_prec, np.nan)
-
         denom_rec = TP + FN
         recall = np.where(denom_rec > 0, TP / denom_rec, np.nan)
-
         accuracy = TP.sum() / cm.sum() if cm.sum() > 0 else 0.0
+
+        # Mean iou
         miou = np.nanmean(iou)
 
         # Damage only miou (Minor, Major, Destroyed classes)
         damage_miou = np.nanmean(iou[[1, 2, 3]])
 
+        # Macro_f1
         f1 = np.where(
             (precision + recall) > 0,
             2 * precision * recall / (precision + recall),
@@ -93,6 +94,9 @@ class ConfusionMatrixTracker:
 
 @torch.no_grad()
 def validate(model, loader, criterion, device, num_classes = 5, siamese=False):
+    """
+    Used to evaluate model on validation set
+    """
     model.eval()
     running_loss = 0.0
     tracker = ConfusionMatrixTracker(num_classes)
@@ -119,6 +123,11 @@ def validate(model, loader, criterion, device, num_classes = 5, siamese=False):
 
 
 def test_evaluation(model, test_loader, criterion, device, save_path, num_classes=5, siamese=False):
+    """
+    Used to evaluate a trained model using the test set.
+    Prints and returns loss and segmentation metrics.
+    """
+
     model.load_state_dict(torch.load(save_path, weights_only=True))
     test_loss, test_metrics = validate(model, test_loader, criterion, device, num_classes, siamese=siamese)
 

@@ -1,8 +1,7 @@
 """
 model_unet.py
 
-Baseline Unet Model for XBD Dataset
-
+Baseline U-Net Model for xBD Dataset
 """
 
 import numpy as np

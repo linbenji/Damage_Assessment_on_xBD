@@ -1,7 +1,8 @@
 """
 train.py
 
-Evaluation Utilities for XBD Dataset
+Contains functions used to train models on the
+xBD dataset.
 """
 
 import numpy as np
@@ -12,9 +13,9 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 from PIL import Image
 import matplotlib.pyplot as plt
-
 from src.eval import ConfusionMatrixTracker, validate, CLASS_NAMES
 from torch.amp import autocast, GradScaler
+
 
 # OHEMCrossEntropy done w/ assistance from LLM 
 class OHEMCrossEntropy(nn.Module):
@@ -36,6 +37,7 @@ class OHEMCrossEntropy(nn.Module):
         topk_loss, _ = loss_per_pixel.topk(k)
 
         return topk_loss.mean()
+
 
 # Class TverskyLoss provided by LLM
 class TverskyLoss(nn.Module):
@@ -105,6 +107,7 @@ class ComboLoss(nn.Module):
         tversky_loss = self.tversky(logits, targets, class_weights=self.class_weights)
         return self.ce_weight * ce_loss + self.tversky_weight * tversky_loss
 
+
 # Modified Version From :medium.com/biased-algorithms/a-practical-guide-to-implementing-early-stopping-in-pytorch-for-model-training-99a7cbd46e9d
 class EarlyStopping:
     def __init__(self, patience=5, min_delta=1e-4, mode = "max"):
@@ -132,7 +135,12 @@ class EarlyStopping:
 
         return improved
 
-def train_one_epoch(model, loader, criterion, optimizer, device, num_classes=5, siamese=False, scheduler = None, scaler = None):
+
+def train_one_epoch(model, loader, criterion, optimizer, device, num_classes=5, siamese=False,
+                    scheduler = None, scaler = None):
+    """
+    Function to train a model for a single epoch.
+    """
     model.train()
     running_loss = 0.0
     tracker = ConfusionMatrixTracker(num_classes)
@@ -151,7 +159,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device, num_classes=5, 
                 outputs = model(pre, post)
                 loss = criterion(outputs, masks)
 
-        else:
+        else: # ie, if standard U-Net
             images, masks = batch
             images = images.to(device)
             masks = masks.to(device)
@@ -185,6 +193,9 @@ def run_training(model, train_loader, val_loader,
         num_epochs=25, patience=5, num_classes=5,
         save_path="best_model.pth", verbose=True,
         siamese=False, scaler = None):
+    """
+    Used to train a model for num_epochs epochs with early stopping.
+    """
 
     early_stop = EarlyStopping(patience=patience, mode='max')
     history = {"train_loss": [], "val_loss": [], "train_miou": [], "val_miou": [], "lr": []}
@@ -236,6 +247,10 @@ def run_training(model, train_loader, val_loader,
 
 
 def plot_train_history(history):
+    """
+    Shows training history by plotting loss (and LR scheduler)
+    as a function of epochs.
+    """
     epochs = range(1, len(history["train_loss"]) + 1)
     fig, axes = plt.subplots(1, 3, figsize=(16, 4))
 

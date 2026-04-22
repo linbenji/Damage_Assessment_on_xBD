@@ -1,7 +1,7 @@
 """
 dataloader.py
 
-XBD Dataset Dataloader
+Dataloader for the xBD dataset
 """
 
 from torch.utils.data import DataLoader, WeightedRandomSampler
@@ -9,11 +9,10 @@ from src.augment import XBDDatasetAugmented
 import numpy as np
 
 
-def get_loaders(train_files, val_files, test_files,
-    img_dir, mask_dir,
+def get_loaders(train_files, val_files, test_files, img_dir, mask_dir,
     batch_size=4, num_workers=4, pin_memory = True, siamese=False, augment_train=False):
     """
-    Used to load augmented XBD dataset
+    Used to load and return the augmented xBD dataset
     """
 
     train_dataset = XBDDatasetAugmented(train_files, img_dir, mask_dir, siamese=siamese, augment=augment_train)
