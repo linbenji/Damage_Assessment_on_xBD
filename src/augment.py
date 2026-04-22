@@ -94,8 +94,11 @@ class XBDDatasetAugmented(Dataset):
         Uses tile-level weights (ie, not pixel density) to focus
         on presence of major and destroyed classes.
         """
-        has_damage = np.any((mask == 2) | (mask == 3))
-        if has_damage:
+        if np.any(mask == 4):
+            return 15.0
+        if np.any(mask == 3):
+            return 10.0
+        if np.any(mask == 2):
             return 3.0
         else:
             return 1.0

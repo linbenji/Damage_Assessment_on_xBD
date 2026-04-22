@@ -29,7 +29,7 @@ def denormalize(img):
 
 
 @torch.no_grad()
-def visualize_predictions(model, test_loader, device, num_samples=4, title="Model Predictions"):
+def visualize_predictions(model, test_loader, device, num_samples=4, title="Model Predictions", siamese = True):
     """
     Creates a grid of images, where each row is an example and the columns are
     Pre | Post | Ground Truth | Prediction
@@ -49,18 +49,30 @@ def visualize_predictions(model, test_loader, device, num_samples=4, title="Mode
     shown = 0
 
     for batch in test_loader:
-        pre, post, masks = batch
+        if siamese: 
+            pre, post, masks = batch
 
-        pre = pre.to(device)
-        post = post.to(device)
+            pre = pre.to(device)
+            post = post.to(device)
+            masks = masks.to(device)
 
-        preds = model(pre, post).argmax(dim=1).cpu().numpy()
+            preds = model(pre, post).argmax(dim=1).cpu().numpy()
 
-        pre = pre.cpu().numpy()
-        post = post.cpu().numpy()
-        masks = masks.numpy()
+            pre = pre.cpu().numpy()
+            post = post.cpu().numpy()
+            masks = masks.cpu().numpy()
+        else:
+            images, masks = batch
 
-        B = pre.shape[0]
+            images = images.to(device)
+            masks = masks.to(device)
+
+            preds = model(images).argmax(dim=1).cpu().numpy()
+
+            images = images.cpu().numpy()
+            masks = masks.cpu().numpy()
+            
+        B = masks.shape[0]
 
         for i in range(B):
             if shown >= num_samples:

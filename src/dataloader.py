@@ -24,7 +24,7 @@ def get_loaders(train_files, val_files, test_files,
     # Oversampling
     weights = np.array(train_dataset.sample_weights)
     weights = weights / (weights.mean() + 1e-8)
-    weights = np.sqrt(weights + 1e-6) # normalize
+    weights = (weights + 1e-6) # normalize
     sampler = WeightedRandomSampler(
         weights=weights,
         num_samples=len(weights),
