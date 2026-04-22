@@ -69,7 +69,12 @@ def visualize_predictions(model, test_loader, device, num_samples=4, title="Mode
 
             preds = model(images).argmax(dim=1).cpu().numpy()
 
-            images = images.cpu().numpy()
+            # Split concatenated input into pre/post
+            pre = images[:, 0:3, :, :]
+            post = images[:, 3:6, :, :]
+
+            pre = pre.cpu().numpy()
+            post = post.cpu().numpy()
             masks = masks.cpu().numpy()
             
         B = masks.shape[0]

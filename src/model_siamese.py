@@ -1,9 +1,8 @@
 """
 model_siamese.py
 
-Defines a baseline model for a Siamese network. Used to encoder changes
-between pre- and post-disaster images. These encoded changes will be
-then be used as input to the UNet for segmentation.
+Defines a baseline model for a Siamese network. Used to explicitly
+encode changes between pre- and post-disaster images.
 """
 
 import torch
@@ -63,6 +62,9 @@ class SiameseUNetDecoder(nn.Module):
 
 # Class created with the assistance of LLMs
 class SiameseUNet(nn.Module):
+    """
+    Siamese U-Net class.
+    """
     def __init__(self, num_classes, base_features, in_channels=3):
         super().__init__()
         self.encoder = SiameseUnetEncoder(in_channels=in_channels, base_features=base_features)

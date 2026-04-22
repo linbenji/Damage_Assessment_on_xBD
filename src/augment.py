@@ -1,8 +1,8 @@
 """
 augment.py
 
-XBD Dataset with Geometric Augmentations
-
+Used to perform geometric data augmentation on
+the xBD dataset
 """
 
 import os

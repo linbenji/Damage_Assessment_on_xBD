@@ -1,11 +1,27 @@
+"""
+xBD_splits.py
+
+Used to create train/val/test splits
+"""
+
+
 import os
 from collections import defaultdict
 import random
 
 def extract_event(filename):
+    """
+    Simply extracts and returns event name from filename
+    """
     return filename.split("_")[0]
 
 def create_splits(img_dir, mask_dir, seed=42):
+    """
+    Creates train/val/test splits for xBD in an event-aware
+    manner. In other words, tiles from the same disaster images
+    are grouped together.
+    """
+
 
     imgs = sorted(os.listdir(img_dir))
     masks = sorted(os.listdir(mask_dir))
