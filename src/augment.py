@@ -95,7 +95,7 @@ class XBDDatasetAugmented(Dataset):
         on presence of major and destroyed classes.
         """
         if np.any(mask == 4):
-            return 15.0
+            return 10.0
         if np.any(mask == 3):
             return 10.0
         if np.any(mask == 2):
