@@ -1,4 +1,4 @@
-# Siamese U-Net for Building Damage Assessment on xBD
+# Exploration of U-Net Architecture for Damage Assessment on xBD Dataset 
 
 **Semantic segmentation of building damage severity from pre- and post-disaster satellite imagery.**
 
