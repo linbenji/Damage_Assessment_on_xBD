@@ -32,7 +32,7 @@ Two core architectures are implemented and compared:
 │   ├── baseline_UNet.ipynb              # UNet with CE loss only
 │   ├── baseline_UNet_v2.ipynb           # UNet with ComboLoss (Tversky + weighted CE)
 │   ├── baseline_Siamese_UNet.ipynb      # Siamese UNet baseline
-│   ├── custom_weight_Siamese_UNet.ipynb # Siamese UNet with inverse effective number class weights
+│   ├── custom_weight_Siamese_UNet.ipynb # Siamese UNet with custom weights
 │   ├── ohem_Siamese_UNet.ipynb          # Siamese UNet with OHEM
 │   └── Results Comparison.ipynb         # Aggregated results, metrics comparison, plotting
 ├── Preprocessing
