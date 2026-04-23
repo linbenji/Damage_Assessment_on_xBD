@@ -23,8 +23,8 @@ Two core architectures are implemented and compared:
 │   ├── model_unet.py                    # Baseline U-Net architecture
 │   ├── model_siamese.py                 # Siamese U-Net architecture
 │   ├── train.py                         # Training loop, losses, early stopping
-│   ├── eval.py                          # Evaluation utilities, confusion matrix tracker
-│   ├── augment.py                       # Dataset class with geometric augmentations and oversampling
+│   ├── eval.py                          # Evaluation utilities
+│   ├── augment.py                       # Class with geometric augmentations and oversampling
 │   ├── dataloader.py                    # DataLoader construction with WeightedRandomSampler
 │   ├── xBD_splits.py                    # Event-based train/val/test splitting
 │   └── __init__.py
