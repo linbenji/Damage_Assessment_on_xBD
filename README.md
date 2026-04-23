@@ -4,6 +4,8 @@
 
 John Creighton & Benjamin Lin — Khoury College of Computer Sciences, Northeastern University
 
+A demonstration of our setup can be found in  ohem_Siamese_UNet.ipynb under the Model_Architectures Notebooks directory. 
+
 ---
 
 ## Overview
