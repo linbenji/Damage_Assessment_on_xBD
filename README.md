@@ -181,8 +181,7 @@ model = SiameseUNet(num_classes=5, base_features=32, in_channels=3).to(device)
 # Use siamese=True in get_loaders — model receives (pre, post, mask) tuples
 ```
 
-### Class Weights (Inverse Effective Number)
-
+### Class Weights 
 ```python
 beta = 0.9999
 class_counts = torch.tensor([
@@ -197,6 +196,9 @@ effective_num = (1.0 - beta ** class_counts) / (1.0 - beta)
 weights = 1.0 / effective_num
 weights = weights / weights.min()
 class_weights = weights.to(device)
+
+# Custom Weighting Schema 
+class_weights = torch.tensor([0.3, 1.5, 40.0, 35.0, 5.0])
 ```
 
 ---
